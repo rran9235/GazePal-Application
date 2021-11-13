@@ -80,6 +80,7 @@ class GazePal_PC:
         
         # Create Haar Cascade classifier for Eyes
         self.haar_eye = cv.CascadeClassifier(os.path.join("models", "haarcascade_eye.xml"))
+        self.haar_face = cv.CascadeClassifier(os.path.join("models", "haarcascade_frontalface_default.xml"))
         
         print("[INFO]: Created Haar Classifier.")
 
@@ -122,10 +123,26 @@ class GazePal_PC:
         # Perform click
         pyautogui.leftClick()
 
+    # Function to detect faces
+    def detect_faces(self, img):
+        # Convert to grayscale
+        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        # Detect face(s) in the image
+        faces = self.haar_face.detectMultiScale(gray, 1.3, 5)
+        
+        # Loop through each face detected
+        for (fx, fy, fw, fh) in faces:
+            # Draw rectangle(s) over every face
+            cv.rectangle(img, (fx,fy), (fx+fw,fy+fh), (225,0,0), 2)
+
+        return faces
+
     # Detect eyes in image frame
     def detect_eyes(self, img):
+        # Convert to grayscale        
+        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         # Detect eye(s) in the image
-        eyes = self.haar_eye.detectMultiScale(img)
+        eyes = self.haar_eye.detectMultiScale(gray)
         # Extract image dimensions
         height = np.size(img, 0)
         width = np.size(img, 1)
@@ -141,16 +158,15 @@ class GazePal_PC:
             else:
                 # Centre between the eyes
                 centre = ex + ew/2
-                # # Check size of image
-                # if eh > 70 and eh < 115:
                 # Check if centre of eye is on the right or left
                 if centre > width/2:
-                        left_eye = img[ey:ey+eh, ex:ex+ew]
-                else:
-                    right_eye = img[ey:ey+eh, ex:ex+ew]
+                    # Draw rectangle(s) over every eye
+                    cv.rectangle(img, (ex,ey), (ex+ew,ey+eh), (225,0,0), 2)
+                    # Crop eye
+                    eye = img[ey:ey+eh, ex:ex+ew]
 
         # Return cropped image of left eye and right eye
-        return left_eye, right_eye
+        return eye
 
     # Predict the gaze for a given image frame
     def predict_gaze(self):
@@ -165,10 +181,14 @@ class GazePal_PC:
         frame = cv.flip(frame, 1)
 
         try:
-            # Detect the eyes
-            left_eye, _ = self.detect_eyes(frame)
+            # Detect face
+            faces = self.detect_faces(frame)
+            # Crop face image
+            face_img = frame[faces[0][1]:faces[0][1]+faces[0][3], faces[0][0]:faces[0][0]+faces[0][2]]
+            # Detect the eyes in face image
+            eye = self.detect_eyes(face_img)    
             # Transform image before CNN pass-through
-            torch_img = self.image_loader(left_eye)
+            torch_img = self.image_loader(eye)
             # Obtain CNN prediction distribution
             output = self.GazePal_CNN(torch_img)
             # Extract prediction with highest energy

@@ -28,3 +28,7 @@ The source code for the application is contained inside the folder `src`. The fo
 
 # Contact
 You can contact me over email at rran9235@uni.sydney.edu.au
+
+# See Also
+GazePal also has a data collection program to crowd-source gaze data. The program is uploaded to the following repository: https://github.com/rran9235/gazepal-data-collection <br/>
+The program is also hosted on GitHub pages and can be tested at: https://github.com/rran9235/gazepal-data-collection/
